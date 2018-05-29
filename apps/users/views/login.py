@@ -2,6 +2,7 @@
 
 from __future__ import unicode_literals
 import os
+import random
 from django.core.cache import cache
 from django.shortcuts import render
 from django.contrib.auth import login as auth_login, logout as auth_logout
@@ -25,7 +26,7 @@ from common.utils import get_object_or_none
 from common.mixins import DatetimeSearchMixin, AdminUserRequiredMixin
 from ..models import User, LoginLog
 from ..utils import send_reset_password_mail, check_otp_code, get_login_ip, redirect_user_first_login_or_index, \
-    get_user_or_tmp_user, set_tmp_user_to_cache
+    get_user_or_tmp_user, set_tmp_user_to_cache, check_login_ip_net
 from ..tasks import write_login_log_async
 from .. import forms
 
@@ -34,7 +35,7 @@ __all__ = [
     'UserLoginView', 'UserLoginOtpView', 'UserLogoutView',
     'UserForgotPasswordView', 'UserForgotPasswordSendmailSuccessView',
     'UserResetPasswordView', 'UserResetPasswordSuccessView',
-    'UserFirstLoginView', 'LoginLogListView'
+    'UserFirstLoginView', 'LoginLogListView', 'UserLoginSMSView'
 ]
 
 
@@ -86,10 +87,19 @@ class UserLoginView(FormView):
             # 1,2 & F
             return reverse('users:user-otp-enable-authentication')
         elif not user.otp_enabled:
-            # 0 & T,F
-            auth_login(self.request, user)
-            self.write_login_log()
-            return redirect_user_first_login_or_index(self.request, self.redirect_field_name)
+            login_ip = get_login_ip(self.request)
+            if check_login_ip_net(user, login_ip):
+                # 0 & T,F
+                auth_login(self.request, user)
+                self.write_login_log()
+                return redirect_user_first_login_or_index(self.request, self.redirect_field_name)
+
+            # source IP don't matched
+            code = random.randint(100000, 999999)
+            cache.set(user.username, code, 600)
+            from ..utils import send_sms_mail
+            send_sms_mail(user, code)
+            return reverse('users:login-sms')
 
     def get_context_data(self, **kwargs):
         context = {
@@ -123,6 +133,36 @@ class UserLoginOtpView(FormView):
             return redirect(self.get_success_url())
         else:
             form.add_error('otp_code', _('MFA code invalid'))
+            return super().form_invalid(form)
+
+    def get_success_url(self):
+        return redirect_user_first_login_or_index(self.request, self.redirect_field_name)
+
+    def write_login_log(self):
+        login_ip = get_login_ip(self.request)
+        user_agent = self.request.META.get('HTTP_USER_AGENT', '')
+        write_login_log_async.delay(
+            self.request.user.username, type='W',
+            ip=login_ip, user_agent=user_agent
+        )
+
+
+class UserLoginSMSView(FormView):
+    template_name = 'users/login_sms.html'
+    form_class = forms.UserCheckSMSCodeForm
+    redirect_field_name = 'next'
+
+    def form_valid(self, form):
+        user = get_user_or_tmp_user(self.request)
+        sms_code = form.cleaned_data.get('sms_code')
+        code = cache.get(user.username)
+
+        if int(sms_code) == code:
+            auth_login(self.request, user)
+            self.write_login_log()
+            return redirect(self.get_success_url())
+        else:
+            form.add_error('sms_code', _('code invalid'))
             return super().form_invalid(form)
 
     def get_success_url(self):

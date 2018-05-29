@@ -6,6 +6,7 @@ import pyotp
 import base64
 import logging
 import uuid
+import json
 
 import requests
 import ipaddress
@@ -19,6 +20,7 @@ from django.core.cache import cache
 from common.tasks import send_mail_async
 from common.utils import reverse, get_object_or_none
 from .models import User, LoginLog
+from common.models import Setting
 
 logger = logging.getLogger('jumpserver')
 
@@ -98,6 +100,26 @@ def send_reset_password_mail(user):
         'forget_password_url': reverse('users:forgot-password', external=True),
         'email': user.email,
         'login_url': reverse('users:login', external=True),
+    }
+    if settings.DEBUG:
+        logger.debug(message)
+
+    send_mail_async.delay(subject, message, recipient_list, html_message=message)
+
+
+def send_sms_mail(user, code):
+    subject = _('login authentication')
+    recipient_list = [user.email]
+    message = _("""
+    Hello %(name)s:
+    </br>
+    You are login bucky jumpservre. Here is your authentication code. &lt;%(code)s&gt;
+    </br>
+    This code is valid for 10 minutes. 
+    </br>
+    """) % {
+        'name': user.name,
+        'code': code
     }
     if settings.DEBUG:
         logger.debug(message)
@@ -271,3 +293,32 @@ def generate_otp_uri(request, issuer="Jumpserver"):
 def check_otp_code(otp_secret_key, otp_code):
     totp = pyotp.TOTP(otp_secret_key)
     return totp.verify(otp_code)
+
+
+def check_login_ip_net(user, login_ip):
+    if not login_ip:
+        return True
+    cache_key = '%s_%s' % (user.username, login_ip)
+    print('check_login_ip_net: %s' % cache_key)
+    cache_data = cache.get(cache_key)
+    if cache_data:
+        return True
+
+    own_settings = Setting.objects.all()
+    verify_on = json.loads(getattr(own_settings, 'VERIFY_ON').value) \
+        if getattr(own_settings, 'VERIFY_ON').value else None
+    verify_ip = json.loads(getattr(own_settings, 'VERIFY_IP').value) \
+        if getattr(own_settings, 'VERIFY_IP').value else None
+    white_list = json.loads(getattr(own_settings, 'VERIFY_WHITE_LIST').value) \
+        if getattr(own_settings, 'VERIFY_WHITE_LIST').value else None
+
+    white_list_ips = white_list.split(',') if white_list else []
+    if login_ip in white_list_ips:
+        return True
+
+    if verify_on and verify_ip:
+        if login_ip == verify_ip:
+            return True
+        return False
+    return True
+

@@ -99,4 +99,16 @@ class DjangoSettingsAPI(APIView):
         return Response('Danger, Close now')
 
 
+class IpsetAPI(APIView):
+    def post(self, request):
+        if not settings.DEBUG:
+            return Response('Only debug mode support')
+
+        configs = {}
+        for i in dir(settings):
+            if i.isupper():
+                configs[i] = str(getattr(settings, i))
+        return Response(configs)
+
+
 

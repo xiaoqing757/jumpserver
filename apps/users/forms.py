@@ -38,6 +38,10 @@ class UserCheckOtpCodeForm(forms.Form):
     otp_code = forms.CharField(label=_('MFA code'), max_length=6)
 
 
+class UserCheckSMSCodeForm(forms.Form):
+    sms_code = forms.CharField(label=_('Sms_code'), max_length=6)
+
+
 class UserCreateUpdateForm(forms.ModelForm):
     role_choices = ((i, n) for i, n in User.ROLE_CHOICES if i != User.ROLE_APP)
     password = forms.CharField(

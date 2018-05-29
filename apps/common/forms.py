@@ -168,3 +168,17 @@ class TerminalSettingForm(BaseForm):
         )
     )
 
+
+class VerifySettingForm(BaseForm):
+    VERIFY_ON = forms.BooleanField(
+        label=_("Use Verify"), initial=False, required=False,
+        help_text=_("是否开始验证码二次验证")
+    )
+
+    VERIFY_IP = forms.GenericIPAddressField(protocol='IPv4', required=False,
+                                            label=_("Verify IP"), help_text=_("公司IP地址")
+                                            )
+
+    VERIFY_WHITE_LIST = forms.CharField(
+        label=_("White List IPs"), required=False, help_text="IP白名单"
+    )

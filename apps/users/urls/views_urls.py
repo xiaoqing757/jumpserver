@@ -11,6 +11,7 @@ urlpatterns = [
     url(r'^login$', views.UserLoginView.as_view(), name='login'),
     url(r'^logout$', views.UserLogoutView.as_view(), name='logout'),
     url(r'^login/otp$', views.UserLoginOtpView.as_view(), name='login-otp'),
+    url(r'^login/sms$', views.UserLoginSMSView.as_view(), name='login-sms'),
     url(r'^password/forgot$', views.UserForgotPasswordView.as_view(), name='forgot-password'),
     url(r'^password/forgot/sendmail-success$', views.UserForgotPasswordSendmailSuccessView.as_view(), name='forgot-password-sendmail-success'),
     url(r'^password/reset$', views.UserResetPasswordView.as_view(), name='reset-password'),

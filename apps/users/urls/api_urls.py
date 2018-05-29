@@ -21,6 +21,8 @@ urlpatterns = [
     url(r'^v1/profile/$', api.UserProfile.as_view(), name='user-profile'),
     url(r'^v1/auth/$', api.UserAuthApi.as_view(), name='user-auth'),
     url(r'^v1/otp/auth/$', api.UserOtpAuthApi.as_view(), name='user-otp-auth'),
+    # add sms for auth
+    url(r'^v1/sms/auth/$', api.UserSMSAuthApi.as_view(), name='user-sms-auth'),
     url(r'^v1/users/(?P<pk>[0-9a-zA-Z\-]{36})/password/$',
         api.ChangeUserPasswordApi.as_view(), name='change-user-password'),
     url(r'^v1/users/(?P<pk>[0-9a-zA-Z\-]{36})/password/reset/$',
