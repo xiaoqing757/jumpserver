@@ -49,5 +49,10 @@ urlpatterns = [
 
     url(r'^domain/(?P<pk>[0-9a-zA-Z\-]{36})/gateway/create/$', views.DomainGatewayCreateView.as_view(), name='domain-gateway-create'),
     url(r'^domain/gateway/(?P<pk>[0-9a-zA-Z\-]{36})/update/$', views.DomainGatewayUpdateView.as_view(), name='domain-gateway-update'),
+
+    url(r'^alias/$', views.AliasListView.as_view(), name='alias-list'),
+    url(r'^alias/create/$', views.AliasCreateView.as_view(), name='alias-create'),
+    url(r'^alias/(?P<pk>[0-9]{1,10})/update/$', views.AliasUpdateView.as_view(), name='alias-update'),
+    url(r'^alias/(?P<pk>[0-9]{1,10})/delete/$', views.AliasDeleteView.as_view(), name='alias-delete'),
 ]
 

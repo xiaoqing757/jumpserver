@@ -181,7 +181,7 @@ class Asset(models.Model):
         return data
 
     class Meta:
-        unique_together = ('ip', 'port')
+        # unique_together = ('ip', 'port')
         verbose_name = _("Asset")
 
     @classmethod
@@ -205,3 +205,7 @@ class Asset(models.Model):
             except IntegrityError:
                 print('Error continue')
                 continue
+
+    @property
+    def alias_names(self):
+        return [a.name for a in self.aliases.all()]
